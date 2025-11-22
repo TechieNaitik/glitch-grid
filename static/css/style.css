@@ -21,3 +21,28 @@ canvas {
     box-shadow: 0 0 20px rgba(0, 255, 204, 0.2); /* Subtle glow */
     display: block;
 }
+
+#ui-layer {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    pointer-events: none; /* Let clicks pass through */
+    z-index: 10;
+}
+
+#game-over-screen {
+    background: rgba(0, 0, 0, 0.85);
+    border: 2px solid #00ffcc;
+    padding: 20px 40px;
+    border-radius: 10px;
+    box-shadow: 0 0 30px #00ffcc;
+}
+
+#winner-text {
+    font-size: 40px;
+    color: #fff;
+    margin: 0;
+    text-transform: uppercase;
+}

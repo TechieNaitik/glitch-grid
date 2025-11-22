@@ -11,6 +11,12 @@
 </head>
 <body>
     <h1>GLITCH GRID</h1>
+    <div id="ui-layer">
+        <div id="game-over-screen" style="display: none;">
+            <h2 id="winner-text">PLAYER 1 WINS</h2>
+            <p>Restarting...</p>
+        </div>
+    </div>
     <canvas id="gameCanvas"></canvas>
     <script src="{{ url_for('static', filename='js/game.js') }}"></script>
 </body>

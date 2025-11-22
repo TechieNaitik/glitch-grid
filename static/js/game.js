@@ -15,6 +15,9 @@ canvas.height = CANVAS_SIZE;
 // Store the latest state sent by the server
 let currentGameState = null;
 
+// Store the player ID assigned by the server (p1 or p2)
+let myPlayerId = null;
+
 // --- LISTEN FOR UPDATES ---
 socket.on('state_update', (state) => {
     // Whenever Python sends new data, we update our local variable
@@ -22,6 +25,19 @@ socket.on('state_update', (state) => {
     
     // Trigger a re-draw immediately upon receiving data
     render();
+});
+
+// Update the connection listener to store our player ID
+socket.on('player_assignment', (data) => {
+    myPlayerId = data.id;
+    console.log("Joined Game!", data);
+    
+    // Update the UI to show the player their color
+    const statusDiv = document.getElementById('status') || document.createElement('div');
+    statusDiv.id = 'status';
+    statusDiv.style.color = data.color;
+    statusDiv.innerText = "YOU ARE THIS COLOR";
+    document.body.appendChild(statusDiv);
 });
 
 // --- DRAWING FUNCTIONS ---
@@ -67,22 +83,58 @@ function drawSquare(x, y, color) {
 
 // --- RENDER LOOP ---
 function render() {
-    // 1. Clear Screen
+    // Clear screen and draw grid...
     ctx.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
-    
-    // 2. Draw Background
     drawGrid();
-    
-    // 3. Draw Players (only if we have data)
+
     if (currentGameState && currentGameState.players) {
         const players = currentGameState.players;
         
-        // Loop through all players in the dictionary
         for (let id in players) {
             const p = players[id];
-            drawSquare(p.x, p.y, p.color);
+
+            // --- NEW CHECK: Skip inactive players ---
+            //if (!p.active) continue;
+
+            // 1. Draw Trail
+            if (p.trail.length > 0) {
+                drawTrail(p.trail, p.color);
+            }
+            
+            // 2. Draw Head (if alive)
+            if (!p.dead) {
+                drawSquare(p.x, p.y, p.color);
+            }
         }
     }
+}
+
+// New function to draw the trail (list of coordinates)
+function drawTrail(trail_coords, color) {
+    ctx.shadowBlur = 0; 
+    ctx.fillStyle = color;
+    
+    const totalSegments = trail_coords.length;
+
+    trail_coords.forEach(([x, y], index) => {
+        // Calculate Opacity: 
+        // Index 0 (Oldest) is nearly 0.1 opacity
+        // Last Index (Newest) is 1.0 opacity
+        const opacity = (index + 1) / totalSegments;
+        
+        // Apply opacity to the canvas context
+        ctx.globalAlpha = opacity; 
+
+        ctx.fillRect(
+            (x * TILE_SIZE) + 1, 
+            (y * TILE_SIZE) + 1, 
+            TILE_SIZE - 2, 
+            TILE_SIZE - 2
+        );
+    });
+
+    // IMPORTANT: Reset opacity back to 1.0 so we don't fade the Player Head!
+    ctx.globalAlpha = 1.0; 
 }
 
 document.addEventListener('keydown', (e) => {
@@ -117,6 +169,3 @@ document.addEventListener('keydown', (e) => {
         socket.emit('change_direction', direction);
     }
 });
-
-// Start the loop
-render();
