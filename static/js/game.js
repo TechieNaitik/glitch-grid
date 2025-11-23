@@ -1,6 +1,10 @@
 const socket = io(); // Connect to server
 
 const canvas = document.getElementById('gameCanvas');
+const scoreList = document.getElementById('score-list');
+const winnerText = document.getElementById('winner-text');
+const gameOverScreen = document.getElementById('game-over-screen');
+const countdownScreen = document.getElementById('countdown-screen');
 const ctx = canvas.getContext('2d');
 
 // --- CONFIGURATION ---
@@ -22,6 +26,11 @@ let myPlayerId = null;
 socket.on('state_update', (state) => {
     // Whenever Python sends new data, we update our local variable
     currentGameState = state;
+
+    // Hide game over screen when a new round begins
+    if (gameOverScreen.style.display === 'block') {
+        gameOverScreen.style.display = 'none';
+    }
     
     // Trigger a re-draw immediately upon receiving data
     render();
@@ -38,6 +47,75 @@ socket.on('player_assignment', (data) => {
     statusDiv.style.color = data.color;
     statusDiv.innerText = "YOU ARE THIS COLOR";
     document.body.appendChild(statusDiv);
+});
+
+socket.on('game_over', (data) => {
+    // 1. HANDLE UI MESSAGE
+    if (data.winner_id === myPlayerId) {
+        winnerText.innerText = "VICTORY!";
+        winnerText.style.color = "#00ffcc";
+    } else if (data.winner_id === null) {
+        winnerText.innerText = "DRAW - NO SURVIVORS";
+        winnerText.style.color = "#fff";
+    } else {
+        winnerText.innerText = "ELIMINATED";
+        winnerText.style.color = "#ff0055";
+    }
+    gameOverScreen.style.display = 'block';
+
+    // --- NEW BONUS UI DISPLAY ---
+    let bonusMessage = '';
+    if (data.bonus !== undefined && data.bonus > 0 && data.winner_id === myPlayerId) {
+        bonusMessage = ` (+${data.bonus} Time Bonus!)`;
+    }
+
+    // 2. UPDATE LEADERBOARD
+    // Clear current list
+    scoreList.innerHTML = '';
+    
+    // Get scores and the colors dictionary directly from the event data
+    const scores = data.scores;
+    const colors = data.colors; //
+    
+    // Sort scores high to low
+    // Object.entries converts {id: score} to [[id, score], ...]
+    const sortedScores = Object.entries(data.scores).sort((a, b) => b[1] - a[1]);
+
+    sortedScores.forEach(([pid, score]) => {
+        // Check if the player is still connected (their color is in the map)
+        if (colors[pid]) { 
+            const li = document.createElement('li');
+            const color = colors[pid]; // Use the reliable color data
+            
+            li.innerHTML = `
+                <span class="color-dot" style="background-color: ${color}; color: ${color}"></span>
+                ${score} Wins
+            `;
+            
+            // Highlight MY score
+            if (pid === myPlayerId) {
+                li.style.fontWeight = 'bold';
+                li.style.borderBottom = '1px solid #444';
+            }
+            scoreList.appendChild(li);
+        }
+    });
+    // --- START COUNTDOWN AFTER 1 SECOND ---
+    setTimeout(() => {
+        let count = 3;
+        countdownScreen.innerText = count;
+        countdownScreen.style.display = 'block';
+
+        const interval = setInterval(() => {
+            count--;
+            if (count <= 0) {
+                clearInterval(interval);
+                countdownScreen.style.display = 'none';
+            } else {
+                countdownScreen.innerText = count;
+            }
+        }, 1000);
+    }, 1000);
 });
 
 // --- DRAWING FUNCTIONS ---

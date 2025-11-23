@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Glitch Grid</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
@@ -16,6 +17,22 @@
             <h2 id="winner-text">PLAYER 1 WINS</h2>
             <p>Restarting...</p>
         </div>
+        <div id="countdown-screen" style="
+            display: none;
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 72px;
+            color: #00ffcc;
+            font-weight: bold;
+            text-shadow: 0 0 20px #00ffcc;
+        ">
+            3
+        </div>
+    </div>
+    <div id="leaderboard">
+        <h3>TOP GLITCHERS</h3>
+        <ul id="score-list"> </ul>
     </div>
     <canvas id="gameCanvas"></canvas>
     <script src="{{ url_for('static', filename='js/game.js') }}"></script>
