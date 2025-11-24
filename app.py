@@ -24,11 +24,13 @@ game_state = {
 thread = None
 
 # --- HELPER FUNCTIONS ---
-def generate_random_color():
-    """Generates a bright neon color using HSL."""
-    hue = random.randint(0, 360)
-    # 100% Saturation, 50% Lightness = Neon
-    return f"hsl({hue}, 100%, 50%)"
+def generate_unique_color(existing_colors):
+    """Generates a unique neon HSL color that isn't already in use."""
+    while True:
+        hue = random.randint(0, 360)
+        color = f"hsl({hue}, 100%, 50%)"
+        if color not in existing_colors.values():
+            return color
 
 def get_safe_spawn():
     """Finds a random coordinate that isn't occupied."""
@@ -58,6 +60,8 @@ def check_collision(x, y, current_player_id):
     return False
 
 def reset_game():
+    global round_start_time
+    round_start_time = time.time()
     """Respawn everyone who is currently connected."""
     print("Resetting Round...")
     game_state['game_active'] = True
@@ -76,8 +80,8 @@ def reset_game():
 # --- GAME LOOP ---
 def game_loop():
     print("--- DYNAMIC ENGINE STARTED ---")
-    dead_players = []
     while True:
+        dead_players = []
         players_alive = 0
         total_players = len(game_state['players'])
         
@@ -115,49 +119,21 @@ def game_loop():
 
             # 2. CHECK WIN CONDITION (Last Man Standing)
             alive_ids = [pid for pid, p in game_state['players'].items() if not p['dead']]
-            if len(alive_ids) == 1 and total_players > 1:
+            # Trigger winner condition ONE TIME
+            if game_state['game_active'] and len(alive_ids) == 1 and total_players > 1:
+                game_state['game_active'] = False  # Stop the round now
                 winner_id = alive_ids[0]
-                # Find the last survivor
-                for p_id, p in game_state['players'].items():
-                    if not p['dead']:
-                        winner_id = p_id
-                        break
-                
-                if winner_id:
-                    print(f"Winner: {winner_id}")
-                    
-                    global round_start_time
-                    duration_seconds = 0
-                    if round_start_time:
-                        duration_seconds = int(time.time() - round_start_time)
-                        
-                    # Award 1 bonus point for every 10 seconds survived
-                    # Example: 10s = 1 point, 20s = 2 points, 59s = 5 points
-                    time_bonus = duration_seconds // 10 
-                    
-                    # Ensure score is incremented before emitting game_over
-                    total_score_increase = 1 + time_bonus # Winner always gets +1 base score
+                player_scores[winner_id] = player_scores.get(winner_id, 0) + 1
 
-                    if winner_id in player_scores:
-                        player_scores[winner_id] += 1 
-                    else:
-                        player_scores[winner_id] = 1
+                socketio.emit('game_over', {
+                    'winner_id': winner_id,
+                    'scores': player_scores,
+                    'colors': player_colors_map
+                })
 
-                    global player_colors_map
-                    socketio.emit('game_over', {
-                        'winner_id': winner_id,
-                        'scores': player_scores,
-                        'colors': player_colors_map,
-                        'duration': duration_seconds,
-                        'bonus': time_bonus
-                    })
-                else:
-                    # Everyone died (Draw)
-                    socketio.emit('game_over', {'winner_id': None, 'scores': player_scores})
-                
-                game_state['game_active'] = False
                 socketio.sleep(3)
                 reset_game()
+                continue  # skip rest of loop this tick
 
         socketio.emit('state_update', game_state)
         socketio.sleep(0.04) # 25 FPS
@@ -176,7 +152,8 @@ def handle_connect():
 
     # Generate color
     if sid not in player_colors_map:
-        player_colors_map[sid] = generate_random_color()
+        new_color = generate_unique_color(player_colors_map)
+        player_colors_map[sid] = new_color
     if sid not in player_scores:
         player_scores[sid] = 0
 

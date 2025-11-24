@@ -63,12 +63,6 @@ socket.on('game_over', (data) => {
     }
     gameOverScreen.style.display = 'block';
 
-    // --- NEW BONUS UI DISPLAY ---
-    let bonusMessage = '';
-    if (data.bonus !== undefined && data.bonus > 0 && data.winner_id === myPlayerId) {
-        bonusMessage = ` (+${data.bonus} Time Bonus!)`;
-    }
-
     // 2. UPDATE LEADERBOARD
     // Clear current list
     scoreList.innerHTML = '';
