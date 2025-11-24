@@ -5,6 +5,8 @@ venv/
 env/
 .env
 
+Docs/
+
 # OS specific
 .DS_Store
 Thumbs.db
