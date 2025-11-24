@@ -171,18 +171,14 @@ function render() {
         for (let id in players) {
             const p = players[id];
 
-            // --- NEW CHECK: Skip inactive players ---
-            //if (!p.active) continue;
+            // Skip rendering if server deleted the player
+            if (p.dead) continue;
 
-            // 1. Draw Trail
-            if (p.trail.length > 0) {
-                drawTrail(p.trail, p.color);
-            }
-            
-            // 2. Draw Head (if alive)
-            if (!p.dead) {
-                drawSquare(p.x, p.y, p.color);
-            }
+            // Draw Trail
+            if (p.trail) drawTrail(p.trail, p.color);
+
+            // Draw Head
+            drawSquare(p.x, p.y, p.color);
         }
     }
 }

@@ -19,7 +19,7 @@ round_start_time = None # Tracks time in seconds since epoch
 
 game_state = {
     'players': {}, # Stores all player entities
-    'game_active': True
+    'game_active': True,
 }
 thread = None
 
@@ -76,6 +76,7 @@ def reset_game():
 # --- GAME LOOP ---
 def game_loop():
     print("--- DYNAMIC ENGINE STARTED ---")
+    dead_players = []
     while True:
         players_alive = 0
         total_players = len(game_state['players'])
@@ -94,8 +95,8 @@ def game_loop():
                 next_y = p['y'] + p['dy']
 
                 if check_collision(next_x, next_y, p_id):
-                    p['dead'] = True
                     socketio.emit('game_message', {'message': f"Player Died!"})
+                    dead_players.append(p_id)
                 else:
                     players_alive += 1
                     p['trail'].append((p['x'], p['y']))
@@ -103,10 +104,19 @@ def game_loop():
                         p['trail'].pop(0)
                     p['x'] = next_x
                     p['y'] = next_y
+            
+            # Mark players as dead (do NOT delete them!)
+            for dp in dead_players:
+                if dp in game_state['players']:
+                    p = game_state['players'][dp]
+                    p['dead'] = True
+                    p['trail'] = []
+
 
             # 2. CHECK WIN CONDITION (Last Man Standing)
-            if total_players > 1 and players_alive <= 1:
-                winner_id = None
+            alive_ids = [pid for pid, p in game_state['players'].items() if not p['dead']]
+            if len(alive_ids) == 1 and total_players > 1:
+                winner_id = alive_ids[0]
                 # Find the last survivor
                 for p_id, p in game_state['players'].items():
                     if not p['dead']:
